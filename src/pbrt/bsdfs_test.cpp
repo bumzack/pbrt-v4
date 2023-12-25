@@ -228,7 +228,7 @@ void IntegrateFrequencyTable(const BSDF* bsdf, const Vector3f& wo, int sampleCou
                     [&](Float theta, Float phi) -> Float {
                         Float cosTheta = std::cos(theta), sinTheta = std::sin(theta);
                         Float cosPhi = std::cos(phi), sinPhi = std::sin(phi);
-                        Vector3f wiL(sinTheta * cosPhi, sinTheta * sinPhi, cosTheta);
+                        VectorLer3f wiL(sinTheta * cosPhi, sinTheta * sinPhi, cosTheta);
                         return bsdf->PDF(wo, bsdf->LocalToRender(wiL)) * sinTheta;
                     },
                     i* factorTheta, j* factorPhi, (i + 1) * factorTheta,

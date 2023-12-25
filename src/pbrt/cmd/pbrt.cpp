@@ -3,7 +3,7 @@
 // SPDX: Apache-2.0
 
 #include <pbrt/pbrt.h>
-
+#include <iomanip>
 #include <pbrt/cpu/render.h>
 
 #ifdef PBRT_BUILD_GPU_RENDERER
@@ -23,6 +23,7 @@
 #include <pbrt/util/spectrum.h>
 #include <pbrt/util/string.h>
 #include <pbrt/wavefront/wavefront.h>
+#include <pbrt/pbrt.h>
 
 #include <string>
 #include <vector>
@@ -31,84 +32,17 @@
 #include <array>
 #include "pbrt/util/splines.h"
 
+#include "pbrt/shapes.h"
+
+
 using namespace pbrt;
 using namespace std;
 
-static void usage(const std::string &msg = {}) {
-    if (!msg.empty())
-        fprintf(stderr, "pbrt: %s\n\n", msg.c_str());
-
-    fprintf(stderr,
-            R"(usage: pbrt [<options>] <filename.pbrt...>
-
-Rendering options:
-  --cropwindow <x0,x1,y0,y1>    Specify an image crop window w.r.t. [0,1]^2.
-  --debugstart <values>         Inform the Integrator where to start rendering for
-                                faster debugging. (<values> are Integrator-specific
-                                and come from error message text.)
-  --disable-pixel-jitter        Always sample pixels at their centers.
-  --disable-texture-filtering   Point-sample all textures.
-  --disable-wavelength-jitter   Always sample the same %d wavelengths of light.
-  --displacement-edge-scale <s> Scale target triangle edge length by given value.
-                                (Default: 1)
-  --display-server <addr:port>  Connect to display server at given address and port
-                                to display the image as it's being rendered.
-  --force-diffuse               Convert all materials to be diffuse.)"
-            #ifdef PBRT_BUILD_GPU_RENDERER
-            R"(
-  --gpu                         Use the GPU for rendering. (Default: disabled)
-  --gpu-device <index>          Use specified GPU for rendering.)"
-            #endif
-            R"(
-  --help                        Print this help text.
-  --interactive                 Enable interactive rendering mode.
-  --mse-reference-image         Filename for reference image to use for MSE computation.
-  --mse-reference-out           File to write MSE error vs spp results.
-  --nthreads <num>              Use specified number of threads for rendering.
-  --outfile <filename>          Write the final image to the given filename.
-  --pixel <x,y>                 Render just the specified pixel.
-  --pixelbounds <x0,x1,y0,y1>   Specify an image crop window w.r.t. pixel coordinates.
-  --pixelmaterial <x,y>         Print information about the material visible in the
-                                center of the pixel's extent.
-  --pixelstats                  Record per-pixel statistics and write additional images
-                                with their values.
-  --quick                       Automatically reduce a number of quality settings
-                                to render more quickly.
-  --quiet                       Suppress all text output other than error messages.
-  --render-coord-sys <name>     Coordinate system to use for the scene when rendering,
-                                where name is "camera", "cameraworld", or "world".
-  --seed <n>                    Set random number generator seed. Default: 0.
-  --stats                       Print various statistics after rendering completes.
-  --spp <n>                     Override number of pixel samples specified in scene
-                                description file.
-  --wavefront                   Use wavefront volumetric path integrator.
-  --write-partial-images        Periodically write the current image to disk, rather
-                                than waiting for the end of rendering. Default: disabled.
-
-Logging options:
-  --log-file <filename>         Filename to write logging messages to. Default: none;
-                                messages are printed to standard error. Implies
-                                --log-level verbose if specified.
-  --log-level <level>           Log messages at or above this level, where <level>
-                                is "verbose", "error", or "fatal". Default: "error".
-  --log-utilization             Periodically print processor and memory use in verbose-
-                                level logging.
-
-Reformatting options:
-  --format                      Print a reformatted version of the input file(s) to
-                                standard output. Does not render an image.
-  --toply                       Print a reformatted version of the input file(s) to
-                                standard output and convert all triangle meshes to
-                                PLY files. Does not render an image.
-  --upgrade                     Upgrade a pbrt-v3 file to pbrt-v4's format.
-)",
-            NSpectrumSamples);
-    exit(msg.empty() ? 0 : 1);
-}
 
 // main program
-int main(int argc, char *argv[]) {
-
+void test_bezier_shape() {
+    cout << endl << "================================================================================" << endl;
+    cout << "    Bezier Shape " << endl;
     std::array<Point3f, 4> cp;
     Bounds3f b = BoundCubicBezier(pstd::MakeConstSpan(cp), 0.f, 1.f);
     b = Expand(b, 1e-3 * Length(b.Diagonal()));
@@ -116,9 +50,9 @@ int main(int argc, char *argv[]) {
         Point3f p = EvaluateCubicBezier(pstd::MakeConstSpan(cp), u);
         bool inside = Inside(p, b);
         if (inside) {
-            cout << "inside   " << p << " @ u = " << u << " not in " << b << endl;
+//            cout << "inside   " << p << " @ u = " << u << " not in " << b << endl;
         } else {
-            cout << "outside   " << p << " @ u = " << u << " not in " << b << endl;
+//            cout << "outside   " << p << " @ u = " << u << " not in " << b << endl;
         }
     }
 
@@ -136,186 +70,387 @@ int main(int argc, char *argv[]) {
 //            cout << (Inside(p, b)) << p << " @ u = " << u << " not in " << b << endl;
 //        }
 //    }
-//    
+//
+    cout << endl << "================================================================================" << endl;
+
+}
+
+void test_clamp() {
+    cout << endl << "================================================================================" << endl;
+    cout << "clamp     test" << endl << endl;
+
+    Float low = 0.0;
+    Float high = 2.0;
+
+    Float values[10] = {-0.000001, 0.0, 0.25, 0.75, 0.5, 1.0, 1.5, 1.75, 2.0, 3.0};
+
+    for (int i = 0; i < 10; i++) {
+        Float res = Clamp(values[i], low, high);
+        cout << std::fixed << std::setw(11) << std::setprecision(6) << "low " << low << "   high:  " << high
+             << "   value " << values[i] << "  clamped to  ==>      " << res << endl;
+    }
+    cout << endl << "================================================================================" << endl;
+
+}
+
+void test_lerp_f64() {
+    cout << endl << "================================================================================" << endl;
+    cout << "lerp f64    test" << endl << endl;
+
+    Float min = 0.0;
+    Float max = 2.0;
+
+    Float arr[8] = {0.0, 0.25, 0.75, 0.5, 1.0, 1.5, 1.75, 2.0};
+
+    for (int i = 0; i < 8; i++) {
+        Float res = Lerp(arr[i], min, max);
+        cout << std::fixed << std::setw(11) << std::setprecision(6) << "min " << min << "   max:  " << max
+             << "  res     " << res << endl;
+    }
+    cout << endl << "================================================================================" << endl;
+}
+
+
+void test_lerp_vec() {
+    cout << endl << "================================================================================" << endl;
+    cout << "lerp point3d    test" << endl << endl;
+
+    Point3f a = Point3f(1.0f, 2.0f, 3.0f);
+    Point3f b = Point3f(14.0f, -15.0f, 16.0f);
+
+    Float arr[8] = {0.0, 0.25, 0.75, 0.5, 1.0, 1.5, 1.75, 2.0};
+
+    for (int i = 0; i < 8; i++) {
+        Point3f res = Lerp(arr[i], a, b);
+        cout << std::fixed << std::setw(11) << std::setprecision(6) << "a " << a << "   b:  " << b
+             << "  res     " << res << endl;
+    }
+    cout << endl << "================================================================================" << endl;
+
+}
+
+
+void test_blossom_bezier() {
+    cout << endl << "================================================================================" << endl;
+    cout << "bloosom bezier test" << endl << endl;
+
+    pstd::span<const Point3f> cp = {Point3f(0.0f, 1.0f, 1.0f),
+                                    Point3f(1.0f, 1.0f, 2.0f),
+                                    Point3f(2.0f, 2.0f, 2.0f),
+                                    Point3f(3.0f, 3.0f, 3.0f)
+    };
+
+    Float u0 = 0.0;
+    Float u1 = 0.25;
+    Float u2 = 1.0;
+
+    Point3f f1 = BlossomCubicBezier(cp, u0, u0, u0);
+    Point3f f2 = BlossomCubicBezier(cp, u0, u0, u1);
+    Point3f f3 = BlossomCubicBezier(cp, u1, u1, u2);
+    Point3f f4 = BlossomCubicBezier(cp, u2, u2, u2);
+
+    int i = 1;
+    for (Point3f p: cp) {
+        cout << "point  " << i << "   x " << p.x << "  y   " << p.y << "   p.z  " << p.z << endl;
+        i++;
+    }
+    cout << "u0  " << u0 << endl;
+    cout << "u1  " << u1 << endl;
+    cout << "u2  " << u2 << endl;
+
+    cout << "u0 " << u0 << "   u0  " << u0 << "  u0   " << u0 << "   f1       " << f1 << endl;
+    cout << "u0 " << u0 << "   u0  " << u0 << "  u1   " << u1 << "   f2       " << f2 << endl;
+    cout << "u1 " << u1 << "   u1  " << u1 << "  u2   " << u2 << "   f3       " << f3 << endl;
+    cout << "u2 " << u2 << "   u2  " << u2 << "  u2   " << u2 << "   f4       " << f4 << endl;
+    cout << endl << "================================================================================" << endl;
+
+}
+
+
+void test_coordinate_system() {
+    cout << endl << "================================================================================" << endl;
+    cout << "coordinate_system   " << endl << endl;
+
+    Vector3f v1[4] = {Vector3f(1.0, 0.0, 0.0), Vector3f(1.0, 1.0, 0.0), Vector3f(1.0, 0.0, 1.0),
+                      Vector3f(1.0, 1.0, 1.0)};
+    Vector3f v2[4] = {Vector3f(0.0, 0.0, 0.0), Vector3f(0.0, 0.0, 0.0), Vector3f(0.0, 0.0, 0.0),
+                      Vector3f(0.0, 0.0, 0.0)};
+    Vector3f v3[4] = {Vector3f(0.0, 0.0, 0.0), Vector3f(0.0, 0.0, 0.0), Vector3f(0.0, 0.0, 0.0),
+                      Vector3f(0.0, 0.0, 0.0)};
+
+    for (int i = 0; i < 4; i++) {
+        CoordinateSystem(v1[i], &v2[i], &v3[i]);
+        cout << "v1 " << v1[i].x << "     " << v1[i].x << "    " << v1[i].z << endl;
+        cout << "v2 " << v2[i].x << "     " << v2[i].x << "    " << v2[i].z << endl;
+        cout << "v3 " << v3[i].x << "     " << v3[i].x << "    " << v3[i].z << endl;
+
+
+        cout << endl;
+    }
+
+
+    cout << endl << "================================================================================" << endl;
+
+}
+
+
+void test_look_at() {
+    cout << endl << "================================================================================" << endl;
+    cout << "   LookAt   " << endl << endl;
+
+
+    Point3f pos = Point3f(1.0, 2.0, 3.0);
+    Point3f look = Point3f(5.0, 6.0, 7.0);
+    Vector3f up[3] = {Vector3f(1.0, 0.0, 0.0), Vector3f(0.0, 1.0, 0.0), Vector3f(0.0, 0.0, 1.0)};
+
+    cout << "pos:   " << pos.x << "   " << pos.y << "    " << pos.z << endl;
+    cout << "look:   " << look.x << "   " << look.y << "    " << look.z << endl;
+
+    for (int i = 0; i < 3; i++) {
+        Transform t = LookAt(pos, look, up[i]);
+
+        SquareMatrix<4> m = t.GetMatrix();
+        SquareMatrix<4> m_inv = t.GetInverseMatrix();
+
+        cout << "up:   " << up[i].x << "   " << up[i].y << "    " << up[i].z << endl;
+
+        cout << "m[..][0]:   " << m[0][0] << "   " << m[1][0] << "    " << m[2][0] << "  " << m[3][0] << endl;
+        cout << "m[..][1]:   " << m[1][1] << "   " << m[1][1] << "    " << m[2][1] << "  " << m[3][1] << endl;
+        cout << "m[..][2]:   " << m[1][2] << "   " << m[1][2] << "    " << m[2][2] << "  " << m[3][2] << endl;
+        cout << "m[..][3]:   " << m[1][3] << "   " << m[1][3] << "    " << m[2][3] << "  " << m[3][3] << endl;
+
+
+        cout << "m_inv[..][0]:   " << m_inv[0][0] << "   " << m_inv[1][0] << "    " << m_inv[2][0] << "  "
+             << m_inv[3][0] << endl;
+        cout << "m_inv[..][1]:   " << m_inv[1][1] << "   " << m_inv[1][1] << "    " << m_inv[2][1] << "  "
+             << m_inv[3][1] << endl;
+        cout << "m_inv[..][2]:   " << m_inv[1][2] << "   " << m_inv[1][2] << "    " << m_inv[2][2] << "  "
+             << m_inv[3][2] << endl;
+        cout << "m_inv[..][3]:   " << m_inv[1][3] << "   " << m_inv[1][3] << "    " << m_inv[2][3] << "  "
+             << m_inv[3][3] << endl;
+        cout << endl;
+
+    }
+
+
+    cout << endl << "================================================================================" << endl;
+
+}
+
+
+void test_union() {
+    cout << endl << "================================================================================" << endl;
+    cout << "   Union   " << endl << endl;
+
+    Point3f p0 = Point3f(0.0, 0.0, 0.0);
+    Point3f p1 = Point3f(2.0, 3.0, 4.0);
+
+    Point3f p2 = Point3f(0.5, -0.5, -1.5);
+    Point3f p3 = Point3f(1.5, 13.0, 3.0);
+
+    Bounds3f bb1 = Bounds3f(p0, p1);
+    Bounds3f bb2 = Bounds3f(p2, p3);
+
+    Bounds3f u = Union(bb1, bb2);
+
+
+    cout << "bb1.min:   " << bb1.pMin.x << "   " << bb1.pMin.y << "    " << bb1.pMin.z << endl;
+    cout << "bb1.max:   " << bb1.pMax.x << "   " << bb1.pMax.y << "    " << bb1.pMax.z << endl;
+
+    cout << "bb2.min:   " << bb2.pMin.x << "   " << bb2.pMin.y << "    " << bb2.pMin.z << endl;
+    cout << "bb2.max:   " << bb2.pMax.x << "   " << bb2.pMax.y << "    " << bb2.pMax.z << endl;
+
+    cout << "union.min:   " << u.pMin.x << "   " << u.pMin.y << "    " << u.pMin.z << endl;
+    cout << "union.max:   " << u.pMax.x << "   " << u.pMax.y << "    " << u.pMax.z << endl;
+
+
+    cout << endl << "================================================================================" << endl;
+
+}
+
+
+void test_expand() {
+    cout << endl << "================================================================================" << endl;
+    cout << "   Expand   " << endl << endl;
+
+    Point3f p0 = Point3f(0.0, 0.0, 0.0);
+    Point3f p1 = Point3f(2.0, 3.0, 4.0);
+
+    Bounds3f bb1 = Bounds3f(p0, p1);
+
+    Bounds3f e = Expand(bb1, 0.75);
+
+    cout << "bb1.min:   " << bb1.pMin.x << "   " << bb1.pMin.y << "    " << bb1.pMin.z << endl;
+    cout << "bb1.max:   " << bb1.pMax.x << "   " << bb1.pMax.y << "    " << bb1.pMax.z << endl;
+
+    cout << "expand.min:   " << e.pMin.x << "   " << e.pMin.y << "    " << e.pMin.z << endl;
+    cout << "expand.max:   " << e.pMax.x << "   " << e.pMax.y << "    " << e.pMax.z << endl;
+
+    cout << endl << "================================================================================" << endl;
+}
+
+
+void test_ray_bounds() {
+    cout << endl << "================================================================================" << endl;
+    cout << "   rayBounds   " << endl << endl;
+
+    Ray r = Ray(Point3f(1.0, 2.0, 3.0), Vector3f(-2.0, -2.0, -1.5));
+    Float tMax = 1.0;
+    Bounds3f rayBounds(Point3f(0, 0, 0), Point3f(0, 0, Length(r.d) * tMax));
+
+
+    cout << "ray.p:   " << r.o.x << "   " << r.o.y << "    " << r.o.z << endl;
+    cout << "ray.d:   " << r.d.x << "   " << r.d.y << "    " << r.d.z << "    length(r.d)  " << Length(r.d) << endl;
+
+
+    cout << "rayBounds.min:   " << rayBounds.pMin.x << "   " << rayBounds.pMin.y << "    " << rayBounds.pMin.z << endl;
+    cout << "rayBounds.max:   " << rayBounds.pMax.x << "   " << rayBounds.pMax.y << "    " << rayBounds.pMax.z << endl;
+
+    cout << endl << "================================================================================" << endl;
+}
+
+
+void test_overlaps() {
+    cout << endl << "================================================================================" << endl;
+    cout << "   Overlaps   " << endl << endl;
+
+    Point3f p0 = Point3f(0.0, 0.0, 0.0);
+    Point3f p1 = Point3f(2.0, 3.0, 4.0);
+
+    Point3f p2 = Point3f(0.5, 0.5, 0.5);
+    Point3f p3 = Point3f(1.5, 13.0, 3.0);
+
+    Point3f p4 = Point3f(10.5, 10.5, 10.5);
+    Point3f p5 = Point3f(1.5, 13.0, 13.0);
+
+    Bounds3f bb1 = Bounds3f(p0, p1);
+    Bounds3f bb2 = Bounds3f(p2, p3);
+    Bounds3f bb3 = Bounds3f(p4, p5);
+
+    bool overlaps = Overlaps(bb1, bb2);
+    bool overlaps2 = Overlaps(bb1, bb3);
+
+    cout << "bb1.min:   " << bb1.pMin.x << "   " << bb1.pMin.y << "    " << bb1.pMin.z << endl;
+    cout << "bb1.max:   " << bb1.pMax.x << "   " << bb1.pMax.y << "    " << bb1.pMax.z << endl << endl;
+
+    cout << "bb2.min:   " << bb2.pMin.x << "   " << bb2.pMin.y << "    " << bb2.pMin.z << endl;
+    cout << "bb2.max:   " << bb2.pMax.x << "   " << bb2.pMax.y << "    " << bb2.pMax.z << endl << endl;
+
+    cout << "bb3.min:   " << bb3.pMin.x << "   " << bb3.pMin.y << "    " << bb3.pMin.z << endl;
+    cout << "bb3.max:   " << bb3.pMax.x << "   " << bb3.pMax.y << "    " << bb3.pMax.z << endl << endl;
+
+    cout << "overlaps:   " << std::boolalpha << overlaps << endl;
+    cout << "overlaps2:   " << std::boolalpha << overlaps2 << endl;
+
+    cout << endl << "================================================================================" << endl;
+}
+
+
+void test_evaluate_cubic_bezier() {
+    cout << endl << "================================================================================" << endl;
+    cout << "evaluate_cubic_bezier " << endl << endl;
+
+    Vector3f deriv[3] = {Vector3f(1.0, 0.0, 0.0), Vector3f(1.0, 0.0, 1.0), Vector3f(1.0, 1.0, 0.0)};
+
+    pstd::span<const Point3f> cp = {Point3f(0.0f, 1.0f, 1.0f),
+                                    Point3f(1.0f, 1.0f, 2.0f),
+                                    Point3f(2.0f, 2.0f, 2.0f),
+                                    Point3f(3.0f, 3.0f, 3.0f)
+    };
+
+    int i = 1;
+    for (Point3f p: cp) {
+        cout << "point  " << i << "   x " << p.x << "  y   " << p.y << "   p.z  " << p.z << endl;
+        i++;
+    }
+
+    Float u = 0.5;
+
+    for (int j = 0; j < 3; j++) {
+        Point3f eval = EvaluateCubicBezier(cp, u, &deriv[j]);
+        cout << "evaluated point  " << j << "   x " << eval.x << "  y   " << eval.y << "   p.z  " << eval.z << endl;
+    }
+
+    Point3f eval = EvaluateCubicBezier(cp, u, nullptr);
+    cout << "evaluated point dreiv = nullptr   " << "   x " << eval.x << "  y   " << eval.y << "   p.z  " << eval.z
+         << endl;
+
+    cout << endl << "================================================================================" << endl;
+}
+
+
+void test_intersect_curve() {
+    cout << endl << "================================================================================" << endl;
+    cout << "intersect curve" << endl << endl;
+
+// Shape::Create()
+////     CurveCommon cc =   CurveCommon;
+//   auto curve =pbrt::Curve::Create();
+//    const Transform renderFromObject = Transform();
+//    const Transform objectFromRender = Transform();
+//    bool reverseOrientation = false;
+//    // const ParameterDictionary parameters = ParameterDictionary();
+//    pstd::span<const Point3f> cp = {Point3f(0.0f, 1.0f, 1.0f),
+//                                    Point3f(1.0f, 1.0f, 2.0f),
+//                                    Point3f(2.0f, 2.0f, 2.0f),
+//                                    Point3f(3.0f, 3.0f, 3.0f)
+//    };
+//    ParsedParameterVector parameterVector;
+//    FileLoc f;
+//    ParsedParameter *param = new ParsedParameter( f);
+//param.
+//    const ParameterDictionary parameters = ParameterDictionary({"P", cp}, RGBColorSpace::sRGB);
+//
+//    const Allocator alloc = Allocator{};
+//
+//   auto shapes = Curve::Create(&renderFromObject, &objectFromRender, reverseOrientation,
+//                                parameters, nullptr, alloc);
+//
 
 
 
-//    // Convert command-line arguments to vector of strings
-//    std::vector<std::string> args = GetCommandLineArguments(argv);
+
 //
-//    // Declare variables for parsed command line
-//    PBRTOptions options;
-//    std::vector<std::string> filenames;
-//    std::string logLevel = "error";
-//    std::string renderCoordSys = "cameraworld";
-//    bool format = false, toPly = false;
+//    Vector3f deriv[3] = {Vector3f(1.0, 0.0, 0.0), Vector3f(1.0, 0.0, 1.0), Vector3f(1.0, 1.0, 0.0)};
 //
-//    // Process command-line arguments
-//    for (auto iter = args.begin(); iter != args.end(); ++iter) {
-//        if ((*iter)[0] != '-') {
-//            filenames.push_back(*iter);
-//            continue;
-//        }
 //
-//        auto onError = [](const std::string &err) {
-//            usage(err);
-//            exit(1);
-//        };
-//
-//        std::string cropWindow, pixelBounds, pixel, pixelMaterial;
-//        if (ParseArg(&iter, args.end(), "cropwindow", &cropWindow, onError)) {
-//            std::vector<Float> c = SplitStringToFloats(cropWindow, ',');
-//            if (c.size() != 4) {
-//                usage("Didn't find four values after --cropwindow");
-//                return 1;
-//            }
-//            options.cropWindow = Bounds2f(Point2f(c[0], c[2]), Point2f(c[1], c[3]));
-//        } else if (ParseArg(&iter, args.end(), "pixel", &pixel, onError)) {
-//            std::vector<int> p = SplitStringToInts(pixel, ',');
-//            if (p.size() != 2) {
-//                usage("Didn't find two values after --pixel");
-//                return 1;
-//            }
-//            options.pixelBounds =
-//                Bounds2i(Point2i(p[0], p[1]), Point2i(p[0] + 1, p[1] + 1));
-//        } else if (ParseArg(&iter, args.end(), "pixelbounds", &pixelBounds, onError)) {
-//            std::vector<int> p = SplitStringToInts(pixelBounds, ',');
-//            if (p.size() != 4) {
-//                usage("Didn't find four integer values after --pixelbounds");
-//                return 1;
-//            }
-//            options.pixelBounds = Bounds2i(Point2i(p[0], p[2]), Point2i(p[1], p[3]));
-//        } else if (ParseArg(&iter, args.end(), "pixelmaterial", &pixelMaterial,
-//                            onError)) {
-//            std::vector<int> p = SplitStringToInts(pixelMaterial, ',');
-//            if (p.size() != 2) {
-//                usage("Didn't find two values after --pixelmaterial");
-//                return 1;
-//            }
-//            options.pixelMaterial = Point2i(p[0], p[1]);
-//        } else if (
-//#ifdef PBRT_BUILD_GPU_RENDERER
-//            ParseArg(&iter, args.end(), "gpu", &options.useGPU, onError) ||
-//            ParseArg(&iter, args.end(), "gpu-device", &options.gpuDevice, onError) ||
-//#endif
-//            ParseArg(&iter, args.end(), "debugstart", &options.debugStart, onError) ||
-//            ParseArg(&iter, args.end(), "disable-pixel-jitter",
-//                     &options.disablePixelJitter, onError) ||
-//            ParseArg(&iter, args.end(), "disable-texture-filtering",
-//                     &options.disableTextureFiltering, onError) ||
-//            ParseArg(&iter, args.end(), "disable-wavelength-jitter",
-//                     &options.disableWavelengthJitter, onError) ||
-//            ParseArg(&iter, args.end(), "displacement-edge-scale",
-//                     &options.displacementEdgeScale, onError) ||
-//            ParseArg(&iter, args.end(), "display-server", &options.displayServer,
-//                     onError) ||
-//            ParseArg(&iter, args.end(), "force-diffuse", &options.forceDiffuse,
-//                     onError) ||
-//            ParseArg(&iter, args.end(), "format", &format, onError) ||
-//            ParseArg(&iter, args.end(), "log-level", &logLevel, onError) ||
-//            ParseArg(&iter, args.end(), "log-utilization", &options.logUtilization,
-//                     onError) ||
-//            ParseArg(&iter, args.end(), "log-file", &options.logFile, onError) ||
-//            ParseArg(&iter, args.end(), "interactive", &options.interactive, onError) ||
-//            ParseArg(&iter, args.end(), "mse-reference-image", &options.mseReferenceImage,
-//                     onError) ||
-//            ParseArg(&iter, args.end(), "mse-reference-out", &options.mseReferenceOutput,
-//                     onError) ||
-//            ParseArg(&iter, args.end(), "nthreads", &options.nThreads, onError) ||
-//            ParseArg(&iter, args.end(), "outfile", &options.imageFile, onError) ||
-//            ParseArg(&iter, args.end(), "pixelstats", &options.recordPixelStatistics,
-//                     onError) ||
-//            ParseArg(&iter, args.end(), "quick", &options.quickRender, onError) ||
-//            ParseArg(&iter, args.end(), "quiet", &options.quiet, onError) ||
-//            ParseArg(&iter, args.end(), "render-coord-sys", &renderCoordSys, onError) ||
-//            ParseArg(&iter, args.end(), "seed", &options.seed, onError) ||
-//            ParseArg(&iter, args.end(), "spp", &options.pixelSamples, onError) ||
-//            ParseArg(&iter, args.end(), "stats", &options.printStatistics, onError) ||
-//            ParseArg(&iter, args.end(), "toply", &toPly, onError) ||
-//            ParseArg(&iter, args.end(), "wavefront", &options.wavefront, onError) ||
-//            ParseArg(&iter, args.end(), "write-partial-images",
-//                     &options.writePartialImages, onError) ||
-//            ParseArg(&iter, args.end(), "upgrade", &options.upgrade, onError)) {
-//            // success
-//        } else if (*iter == "--help" || *iter == "-help" || *iter == "-h") {
-//            usage();
-//            return 0;
-//        } else {
-//            usage(StringPrintf("argument \"%s\" unknown", *iter));
-//            return 1;
-//        }
+//    int i = 1;
+//    for (Point3f p: cp) {
+//        cout << "point  " << i << "   x " << p.x << "  y   " << p.y << "   p.z  " << p.z << endl;
+//        i++;
 //    }
 //
-//    // Print welcome banner
-//    if (!options.quiet && !format && !toPly && !options.upgrade) {
-//        printf("pbrt version 4 (built %s at %s)\n", __DATE__, __TIME__);
-//#ifdef PBRT_DEBUG_BUILD
-//        LOG_VERBOSE("Running debug build");
-//        printf("*** DEBUG BUILD ***\n");
-//#endif
-//        printf("Copyright (c)1998-2021 Matt Pharr, Wenzel Jakob, and Greg Humphreys.\n");
-//        printf("The source code to pbrt (but *not* the book contents) is covered "
-//               "by the Apache 2.0 License.\n");
-//        printf("See the file LICENSE.txt for the conditions of the license.\n");
-//        fflush(stdout);
+//    Float u = 0.5;
+//
+//    for (int j = 0; j < 3; j++) {
+//        Point3f eval = EvaluateCubicBezier(cp, u, &deriv[j]);
+//        cout << "evaluated point  " << j << "   x " << eval.x << "  y   " << eval.y << "   p.z  " << eval.z << endl;
 //    }
 //
-//    // Check validity of provided arguments
-//    if (renderCoordSys == "camera")
-//        options.renderingSpace = RenderingCoordinateSystem::Camera;
-//    else if (renderCoordSys == "cameraworld")
-//        options.renderingSpace = RenderingCoordinateSystem::CameraWorld;
-//    else if (renderCoordSys == "world")
-//        options.renderingSpace = RenderingCoordinateSystem::World;
-//    else
-//        ErrorExit("%s: unknown rendering coordinate system.", renderCoordSys);
+//    Point3f eval = EvaluateCubicBezier(cp, u, nullptr);
+//    cout << "evaluated point dreiv = nullptr   " << "   x " << eval.x << "  y   " << eval.y << "   p.z  " << eval.z << endl;
 //
-//    if (!options.mseReferenceImage.empty() && options.mseReferenceOutput.empty())
-//        ErrorExit("Must provide MSE reference output filename via "
-//                  "--mse-reference-out");
-//    if (!options.mseReferenceOutput.empty() && options.mseReferenceImage.empty())
-//        ErrorExit("Must provide MSE reference image via --mse-reference-image");
-//
-//    if (options.pixelMaterial && options.useGPU) {
-//        Warning("Disabling --use-gpu since --pixelmaterial was specified.");
-//        options.useGPU = false;
-//    }
-//
-//    if (options.useGPU && options.wavefront)
-//        Warning("Both --gpu and --wavefront were specified; --gpu takes precedence.");
-//
-//    if (options.pixelMaterial && options.wavefront) {
-//        Warning("Disabling --wavefront since --pixelmaterial was specified.");
-//        options.wavefront = false;
-//    }
-//
-//    if (options.interactive && !(options.useGPU || options.wavefront))
-//        ErrorExit("The --interactive option is only supported with the --gpu "
-//                  "and --wavefront integrators.");
-//
-//    options.logLevel = LogLevelFromString(logLevel);
-//
-//    // Initialize pbrt
-//    InitPBRT(options);
-//
-//    if (format || toPly || options.upgrade) {
-//        FormattingParserTarget formattingTarget(toPly, options.upgrade);
-//        ParseFiles(&formattingTarget, filenames);
-//    } else {
-//        // Parse provided scene description files
-//        BasicScene scene;
-//        BasicSceneBuilder builder(&scene);
-//        ParseFiles(&builder, filenames);
-//
-//        // Render the scene
-//        if (Options->useGPU || Options->wavefront)
-//            RenderWavefront(scene);
-//        else
-//            RenderCPU(scene);
-//
-//        LOG_VERBOSE("Memory used after post-render cleanup: %s", GetCurrentRSS());
-//        // Clean up after rendering the scene
-//        CleanupPBRT();
-//    }
+
+    cout << endl << "================================================================================" << endl;
+
+}
+
+// main program
+int main(int argc, char *argv[]) {
+    test_lerp_f64();
+    test_lerp_vec();
+    test_blossom_bezier();
+    test_coordinate_system();
+    test_look_at();
+    test_union();
+    test_bezier_shape();
+    test_expand();
+    test_ray_bounds();
+    test_overlaps();
+    test_clamp();
+    test_evaluate_cubic_bezier();
+    test_intersect_curve();
+
     return 0;
 }
+
